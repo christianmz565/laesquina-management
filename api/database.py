@@ -1,12 +1,9 @@
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, Index
+from sqlalchemy import create_engine, Column, Integer, String, Numeric, Index, select
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-import os
+from sqlalchemy.orm import sessionmaker, Session
+import env
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = env.DATABASE_URL
 
 engine = create_engine(DATABASE_URL, echo=True, future=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
@@ -44,19 +41,18 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def get_book(db, book_id: int):
-    return db.query(Book).filter(Book.id == book_id).first()
+def get_book(db: Session, book_id: int):
+    return db.execute(select(Book).where(Book.id == book_id)).first()
 
 
-def create_book(db, book: Book):
+def create_book_orm(db: Session, book: Book):
     db.add(book)
     db.commit()
     db.refresh(book)
-    return book
 
 
-def update_book(db, book_id: int, updated_data: dict):
-    book = db.query(Book).filter(Book.id == book_id).first()
+def update_book_orm(db: Session, book_id: int, updated_data: dict):
+    book = get_book(db, book_id)
     if book:
         for key, value in updated_data.items():
             setattr(book, key, value)
@@ -65,31 +61,20 @@ def update_book(db, book_id: int, updated_data: dict):
     return book
 
 
-def delete_book(db, book_id: int):
-    book = db.query(Book).filter(Book.id == book_id).first()
+def delete_book(db: Session, book_id: int):
+    book = get_book(db, book_id)
     if book:
         db.delete(book)
         db.commit()
     return book
 
 
-def search_books(
-    db, title: str = None, author: str = None, version: str = None, price: float = None
-):
-    query = db.query(Book)
+def search_books_orm(db: Session, title: str = None, author: str = None):
+    query = select(Book)
 
     if title:
-        search_str = f"+{title}*"
-        query = query.filter(Book.title.match(search_str, boolean=True))
-
+        query = query.where(Book.title.match(f"+{title}*", boolean=True))
     if author:
-        search_str = f"+{author}*"
-        query = query.filter(Book.author.match(search_str, boolean=True))
+        query = query.where(Book.author.match(f"+{author}*", boolean=True))
 
-    if version:
-        query = query.filter(Book.version.ilike(f"%{version}%"))
-
-    if price is not None:
-        query = query.filter(Book.price == price)
-
-    return query.all()
+    return db.execute(query).all()
