@@ -10,6 +10,12 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 Base = declarative_base()
 
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+
 
 class Book(Base):
     __tablename__ = "books"
@@ -20,6 +26,7 @@ class Book(Base):
     version = Column(String(50))
     price = Column(Numeric(10, 2))
     file = Column(String(255))
+    category_id = Column(Integer, nullable=False)
 
     __table_args__ = (
         Index(
@@ -41,18 +48,19 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def get_book(db: Session, book_id: int):
-    return db.execute(select(Book).where(Book.id == book_id)).first()
+def get_book_orm(db: Session, book_id: int):
+    return db.execute(select(Book).where(Book.id == book_id)).first()[0]
 
 
 def create_book_orm(db: Session, book: Book):
     db.add(book)
     db.commit()
     db.refresh(book)
+    return book
 
 
 def update_book_orm(db: Session, book_id: int, updated_data: dict):
-    book = get_book(db, book_id)
+    book = get_book_orm(db, book_id)
     if book:
         for key, value in updated_data.items():
             setattr(book, key, value)
@@ -61,12 +69,23 @@ def update_book_orm(db: Session, book_id: int, updated_data: dict):
     return book
 
 
-def delete_book(db: Session, book_id: int):
-    book = get_book(db, book_id)
+def delete_book_orm(db: Session, book_id: int):
+    book = get_book_orm(db, book_id)
     if book:
         db.delete(book)
         db.commit()
     return book
+
+
+def create_category_orm(db: Session, category: Category):
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+def get_categories_orm(db: Session):
+    return db.execute(select(Category)).all()
 
 
 def search_books_orm(db: Session, title: str = None, author: str = None):
