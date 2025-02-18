@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Optional
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, Form, File
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -30,8 +30,9 @@ FILES_LOCATION = env.FILES_PATH
 class BookBase(BaseModel):
     title: str
     author: str
-    version: str
+    edition: str
     price: float
+    category_id: int
 
 
 class BookCreate(BookBase):
@@ -41,14 +42,13 @@ class BookCreate(BookBase):
 class BookUpdate(BookBase):
     title: str = None
     author: str = None
-    version: str = None
+    edition: str = None
     price: float = None
     file: str = None
 
 
 class BookPublic(BookBase):
     id: int
-    file: bytes = None
 
 
 @asynccontextmanager
@@ -76,38 +76,9 @@ def get_db():
         db.close()
 
 
-@app.post("/books/search", response_model=list[BookPublic])
-def search_book(
-    title: str = Query(None),
-    author: str = Query(None),
-    db: Session = Depends(get_db),
-):
-    books = search_books_orm(db, title, author)
-
-    results = []
-    for book in books:
-        file_content = None
-        if book.file and os.path.exists(book.file):
-            with open(book.file, "r", encoding="utf-8") as f:
-                file_content = f.read()
-
-        results.append(
-            BookPublic(
-                id=book.id,
-                title=book.title,
-                author=book.author,
-                version=book.version,
-                price=float(book.price) if book.price is not None else None,
-                file=file_content,
-            )
-        )
-
-    return results
-
-
 @app.post("/categories/create")
 def create_category(
-    name: str = Form(...),
+    name: str = Form(),
     db: Session = Depends(get_db),
 ):
     new_category = create_category_orm(db, Category(name=name))
@@ -116,8 +87,17 @@ def create_category(
 
 @app.get("/categories")
 def get_categories(db: Session = Depends(get_db)):
-    categories = get_categories_orm(db)
-    return categories
+    return get_categories_orm(db)
+
+
+@app.post("/books/search", response_model=list[BookPublic])
+def search_book(
+    title: Annotated[Optional[str], Form()] = None,
+    author: Annotated[Optional[str], Form()] = None,
+    db: Session = Depends(get_db),
+):
+    print(title, author)
+    return search_books_orm(db, title, author)
 
 
 @app.get("/books/{book_id}", response_model=BookPublic)
@@ -130,42 +110,64 @@ def get_book(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    file_content = None
-    if book.file and os.path.exists(book.file):
-        with open(book.file, "r") as f:
-            file_content = f.read()
-
-    return BookPublic(
-        id=book.id,
-        title=book.title,
-        author=book.author,
-        version=book.version,
-        price=float(book.price) if book.price is not None else None,
-        file=file_content,
-    )
+    return book
 
 
-@app.post("/books/{book_id}/update")
+@app.post("/books/{book_id}/update", response_model=BookPublic)
 def update_book(
     book_id: int,
-    book: BookUpdate,
+    title: Annotated[Optional[str], Form()] = None,
+    author: Annotated[Optional[str], Form()] = None,
+    edition: Annotated[Optional[str], Form()] = None,
+    price: Annotated[Optional[float], Form()] = None,
+    category_id: Annotated[Optional[int], Form()] = None,
+    file: Annotated[Optional[UploadFile], File()] = None,
     db: Session = Depends(get_db),
 ):
-    updated_data = book.model_dump(exclude_unset=True)
-    updated_book = update_book_orm(db, book_id, updated_data)
-
-    if not updated_book:
+    book = get_book_orm(db, book_id)
+    if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+
+
+    updated_data = {}
+    if title:
+        title = title.replace(" ", "-")
+        updated_data["title"] = title
+    if author:
+        author = author.replace(" ", "-")
+        updated_data["author"] = author
+    if edition:
+        updated_data["edition"] = edition
+    if price:
+        updated_data["price"] = price
+    if category_id:
+        updated_data["category_id"] = category_id
+
+    ext = file.filename.split(".")[-1] if file else book.file.split(".")[-1]
+    b_title = title if title else book.title
+    b_author = author if author else book.author
+    b_edition = edition if edition else book.edition
+    full_path = os.path.join(FILES_LOCATION, f"{b_title}_{b_author}_{b_edition}.{ext}")
+    if file:
+        os.remove(book.file)
+        with open(full_path, "wb") as f:
+            f.write(file.file.read())
+    else:
+        os.rename(book.file, full_path)
+    updated_data["file"] = full_path
+
+    updated_book = update_book_orm(db, book, updated_data)
 
     return updated_book
 
 
-@app.post("/books/{book_id}/delete")
+@app.post("/books/{book_id}/delete", response_model=BookPublic)
 def delete_book(
     book_id: int,
     db: Session = Depends(get_db),
 ):
     deleted_book = delete_book_orm(db, book_id)
+    os.remove(deleted_book.file)
 
     if not deleted_book:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -173,23 +175,33 @@ def delete_book(
     return deleted_book
 
 
-@app.post("/books/create")
+@app.post("/books/create", response_model=BookPublic)
 def create_book(
     title: Annotated[str, Form()],
     author: Annotated[str, Form()],
-    version: Annotated[str, Form()],
+    edition: Annotated[str, Form()],
     price: Annotated[float, Form()],
+    category_id: Annotated[int, Form()],
     file: Annotated[UploadFile, File()],
     db: Session = Depends(get_db),
 ):
     ext = file.filename.split(".")[-1]
-    full_path = os.path.join(FILES_LOCATION, f"{title}_{author}_{version}.{ext}")
+    title = title.replace(" ", "-")
+    author = author.replace(" ", "-")
+    full_path = os.path.join(FILES_LOCATION, f"{title}_{author}_{edition}.{ext}")
     with open(full_path, "wb") as f:
         f.write(file.file.read())
 
     new_book = create_book_orm(
         db,
-        Book(title=title, author=author, version=version, price=price, file=full_path),
+        Book(
+            title=title,
+            author=author,
+            edition=edition,
+            price=price,
+            category_id=category_id,
+            file=full_path,
+        ),
     )
 
     return new_book

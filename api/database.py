@@ -10,6 +10,7 @@ SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 Base = declarative_base()
 
+
 class Category(Base):
     __tablename__ = "categories"
 
@@ -23,7 +24,7 @@ class Book(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
     author = Column(String(255), nullable=False)
-    version = Column(String(50))
+    edition = Column(String(50))
     price = Column(Numeric(10, 2))
     file = Column(String(255))
     category_id = Column(Integer, nullable=False)
@@ -59,8 +60,7 @@ def create_book_orm(db: Session, book: Book):
     return book
 
 
-def update_book_orm(db: Session, book_id: int, updated_data: dict):
-    book = get_book_orm(db, book_id)
+def update_book_orm(db: Session, book: Book, updated_data: dict):
     if book:
         for key, value in updated_data.items():
             setattr(book, key, value)
@@ -85,7 +85,7 @@ def create_category_orm(db: Session, category: Category):
 
 
 def get_categories_orm(db: Session):
-    return db.execute(select(Category)).all()
+    return [category[0] for category in db.execute(select(Category)).all()]
 
 
 def search_books_orm(db: Session, title: str = None, author: str = None):
@@ -96,4 +96,4 @@ def search_books_orm(db: Session, title: str = None, author: str = None):
     if author:
         query = query.where(Book.author.match(f"+{author}*", boolean=True))
 
-    return db.execute(query).all()
+    return [book[0] for book in db.execute(query).all()]
