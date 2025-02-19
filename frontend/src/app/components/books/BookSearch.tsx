@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { API_URL } from "../Constants";
 import { Book } from "../Models";
-import { isSettingEnabled } from "../ClientUtils";
+import { isSettingEnabled } from "../../others/Utils";
 
 function BookTableHeader({ text }: { text: string }) {
   return (
@@ -29,6 +29,21 @@ export default function BookSearch() {
         result += word + " ";
     });
     return result;
+  }
+
+  async function downloadBook(id: number, name: string) {
+    fetch(`${API_URL}/books/${id}/download`, { method: "POST" })
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name + ".pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      });
   }
 
   async function doSearch() {
@@ -95,28 +110,12 @@ export default function BookSearch() {
                     <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Editar</button>
                     <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Eliminar</button>
                   </>}
-                <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Descargar</button>
+                <button onClick={() => downloadBook(book.id, prettyString(book.title))} className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Descargar</button>
               </BookTableRow>
             </tr>
           ))}
         </tbody>
       </table>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-      <span className="h-96"></span>
-
     </div>
   )
 }

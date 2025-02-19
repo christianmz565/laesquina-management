@@ -2,6 +2,7 @@ from typing import Annotated, Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, Form, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import (
@@ -98,6 +99,19 @@ def search_book(
 ):
     print(title, author)
     return search_books_orm(db, title, author)
+
+
+@app.post("/books/{book_id}/download")
+def download_book(
+    book_id: int,
+    db: Session = Depends(get_db),
+):
+    book = get_book_orm(db, book_id)
+    print(book)
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    return FileResponse(book.file, media_type="application/pdf")
 
 
 @app.get("/books/{book_id}", response_model=BookPublic)

@@ -4,5 +4,4 @@ export interface Book {
     author: string;
     edition: string;
     price: number;
-    file: File;
 }

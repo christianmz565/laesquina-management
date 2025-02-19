@@ -21,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} antialiased w-screen bg-zinc-300 dark:bg-zinc-700`}
+        className={`${geistSans.variable} antialiased w-full bg-zinc-300 dark:bg-zinc-700`}
       >
         <Navigation />
         {children}

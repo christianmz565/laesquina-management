@@ -1,11 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
+
 function SettingsSwitch({ label, localName }: { label: string, localName: string }) {
   const internalID = `settings-switch-${localName}`;
   function setSetting() {
     const setting = document.getElementById(internalID) as HTMLInputElement;
     localStorage.setItem(localName, setting.checked.toString());
   }
+  useEffect(() => {
+    let enabled = localStorage.getItem(localName) === "true";
+    const setting = document.getElementById(internalID) as HTMLInputElement;
+    setting.checked = enabled;
+  }, []);
   return (
     <div className="flex flex-row items-center gap-4">
       <div className="relative inline-block w-11 h-5">
