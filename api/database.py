@@ -1,4 +1,13 @@
-from sqlalchemy import create_engine, Column, Integer, String, Numeric, Index, select
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Numeric,
+    Index,
+    or_,
+    select,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 import env
@@ -88,12 +97,21 @@ def get_categories_orm(db: Session):
     return [category[0] for category in db.execute(select(Category)).all()]
 
 
-def search_books_orm(db: Session, title: str = None, author: str = None):
+def search_books_orm(
+    db: Session, title: str = None, author: str = None, add_or: bool = False
+):
     query = select(Book)
+    conditions = []
 
     if title:
-        query = query.where(Book.title.match(f"+{title}*", boolean=True))
+        conditions.append(Book.title.match(f"+{title}*", boolean=True))
     if author:
-        query = query.where(Book.author.match(f"+{author}*", boolean=True))
+        conditions.append(Book.author.match(f"+{author}*", boolean=True))
 
-    return [book[0] for book in db.execute(query).all()]
+    if conditions:
+        if add_or:
+            query = query.where(or_(*conditions))
+        else:
+            query = query.where(*conditions)
+        return [book[0] for book in db.execute(query).all()]
+    return []

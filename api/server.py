@@ -52,6 +52,14 @@ class BookPublic(BookBase):
     id: int
 
 
+class CategoryBase(BaseModel):
+    name: str
+
+
+class CategoryPublic(CategoryBase):
+    id: int
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(FILES_LOCATION, exist_ok=True)
@@ -77,7 +85,7 @@ def get_db():
         db.close()
 
 
-@app.post("/categories/create")
+@app.post("/categories/create", response_model=CategoryPublic)
 def create_category(
     name: str = Form(),
     db: Session = Depends(get_db),
@@ -86,18 +94,25 @@ def create_category(
     return new_category
 
 
-@app.get("/categories")
+@app.get("/categories", response_model=list[CategoryPublic])
 def get_categories(db: Session = Depends(get_db)):
     return get_categories_orm(db)
 
 
 @app.post("/books/search", response_model=list[BookPublic])
 def search_book(
+    query: Annotated[str, Form()],
+    db: Session = Depends(get_db),
+):
+    return search_books_orm(db, query, query, add_or=True)
+
+
+@app.post("/books/complete-search", response_model=list[BookPublic])
+def search_book_complete(
     title: Annotated[Optional[str], Form()] = None,
     author: Annotated[Optional[str], Form()] = None,
     db: Session = Depends(get_db),
 ):
-    print(title, author)
     return search_books_orm(db, title, author)
 
 
@@ -125,7 +140,6 @@ def get_book(
         raise HTTPException(status_code=404, detail="Book not found")
 
     return book
-
 
 @app.post("/books/{book_id}/update", response_model=BookPublic)
 def update_book(
@@ -175,18 +189,6 @@ def update_book(
     return updated_book
 
 
-@app.post("/books/{book_id}/delete", response_model=BookPublic)
-def delete_book(
-    book_id: int,
-    db: Session = Depends(get_db),
-):
-    deleted_book = delete_book_orm(db, book_id)
-    os.remove(deleted_book.file)
-
-    if not deleted_book:
-        raise HTTPException(status_code=404, detail="Book not found")
-
-    return deleted_book
 
 
 @app.post("/books/create", response_model=BookPublic)
@@ -220,6 +222,18 @@ def create_book(
 
     return new_book
 
+@app.post("/books/{book_id}/delete", response_model=BookPublic)
+def delete_book(
+    book_id: int,
+    db: Session = Depends(get_db),
+):
+    deleted_book = delete_book_orm(db, book_id)
+    os.remove(deleted_book.file)
+
+    if not deleted_book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    return deleted_book
 
 if __name__ == "__main__":
     import uvicorn

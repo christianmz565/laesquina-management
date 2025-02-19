@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 export function isSettingEnabled(setting: string): boolean {
   let enabled = false;
   if (typeof window !== "undefined") {
@@ -8,4 +6,15 @@ export function isSettingEnabled(setting: string): boolean {
       enabled = true;
   }
   return enabled;
+}
+
+export function prettyString(str: string) {
+  let result = "";
+  str.split("-").forEach(word => {
+    if (word.length > 4)
+      result += word.charAt(0).toUpperCase() + word.slice(1) + " ";
+    else
+      result += word + " ";
+  });
+  return result;
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { API_URL } from "../Constants";
-import { Book } from "../Models";
-import { isSettingEnabled } from "../../others/Utils";
+import { Book, Category } from "../Models";
+import { isSettingEnabled, prettyString } from "../../others/Utils";
 
 function BookTableHeader({ text }: { text: string }) {
   return (
@@ -17,21 +17,27 @@ function BookTableRow({ children }: { children: React.ReactNode }) {
   );
 }
 
+function BookSearchInput({ text, id }: { text: string, id: string }) {
+  return (
+    <>
+      <p className="text-md font-bold text-zinc-700 dark:text-zinc-300">{text}</p>
+      <input id={id} type="text" className="w-full bg-zinc-100 dark:bg-zinc-400 py-2 px-4 border border-zinc-400 dark:border-zinc-600 rounded-2xl" placeholder={text} />
+    </>
+  );
+}
+
 export default function BookSearch() {
   let [books, setBooks] = useState<Book[]>([]);
+  let [categories, setCategories] = useState<Category[]>([]);
+  let completeSearch = isSettingEnabled("complete-search");
 
-  function prettyString(str: string) {
-    let result = "";
-    str.split("-").forEach(word => {
-      if (word.length > 4)
-        result += word.charAt(0).toUpperCase() + word.slice(1) + " ";
-      else
-        result += word + " ";
-    });
-    return result;
-  }
+  useEffect(() => {
+    fetch(API_URL + "/categories")
+      .then(response => response.json() as Promise<Category[]>)
+      .then(data => setCategories(data));
+  }, []);
 
-  async function downloadBook(id: number, name: string) {
+  function downloadBook(id: number, name: string) {
     fetch(`${API_URL}/books/${id}/download`, { method: "POST" })
       .then(response => response.blob())
       .then(blob => {
@@ -46,7 +52,28 @@ export default function BookSearch() {
       });
   }
 
-  async function doSearch() {
+  function doSearch() {
+    const queryElem = document.getElementById("query") as HTMLInputElement;
+    const query = queryElem.value;
+    queryElem.value = "";
+    const results = document.getElementById("results") as HTMLElement;
+    if (query) {
+      const formData = new FormData();
+      formData.append("query", query.toLowerCase());
+      fetch(API_URL + "/books/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams(formData as unknown as Record<string, string>)
+      })
+        .then(response => response.json() as Promise<Book[]>)
+        .then(data => setBooks(data))
+        .then(() => results.scrollIntoView({ behavior: "smooth" }));
+    }
+  }
+
+  function doCompleteSearch() {
     const titleElem = document.getElementById("title") as HTMLInputElement;
     const title = titleElem.value;
     titleElem.value = "";
@@ -61,29 +88,34 @@ export default function BookSearch() {
       if (author)
         formData.append("author", author.toLowerCase());
       console.log(formData);
-      const books = await fetch(API_URL + "/books/search", {
+      fetch(API_URL + "/books/complete-search", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded"
         },
         body: new URLSearchParams(formData as unknown as Record<string, string>)
-      });
-
-      const searchResponse = await books.json() as Book[];
-      setBooks(searchResponse);
-      window.scrollTo({ top: results.offsetTop, behavior: "smooth" });
+      })
+        .then(response => response.json() as Promise<Book[]>)
+        .then(data => setBooks(data))
+        .then(() => results.scrollIntoView({ behavior: "smooth" }));
     }
   }
 
   return (
     <div className="flex flex-col items-start gap-8 p-4 w-full">
       <div className="flex flex-col gap-1 w-full">
-        <p className="text-md font-bold text-zinc-700 dark:text-zinc-300">Título</p>
-        <input id="title" type="text" className="w-full bg-zinc-100 dark:bg-zinc-400 py-2 px-4 border border-zinc-400 dark:border-zinc-600 rounded-2xl" placeholder="Título" />
-        <p className="text-md font-bold text-zinc-700 dark:text-zinc-300">Autor</p>
-        <input id="author" type="text" className="w-full bg-zinc-100 dark:bg-zinc-400 py-2 px-4 border border-zinc-400 dark:border-zinc-600 rounded-2xl" placeholder="Autor" />
-        <span className="h-2"></span>
-        <button className="px-4 py-2 w-36 bg-zinc-400 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-2xl" onClick={doSearch}>Buscar</button>
+        {completeSearch ?
+          <>
+            <BookSearchInput text="Título" id="title" />
+            <BookSearchInput text="Autor" id="author" />
+            <span className="h-2"></span>
+            <button className="px-4 py-2 w-36 bg-zinc-400 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-2xl" onClick={doCompleteSearch}>Buscar</button>
+          </> :
+          <>
+            <BookSearchInput text="Búsqueda" id="query" />
+            <span className="h-2"></span>
+            <button className="px-4 py-2 w-36 bg-zinc-400 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-300 rounded-2xl" onClick={doSearch}>Buscar</button>
+          </>}
       </div>
       <table className="w-full" id="results">
         <thead>
@@ -93,6 +125,7 @@ export default function BookSearch() {
             <BookTableHeader text="Autor" />
             <BookTableHeader text="Edición" />
             <BookTableHeader text="Precio" />
+            <BookTableHeader text="Categoría" />
             <BookTableHeader text="Acciones" />
           </tr>
         </thead>
@@ -104,6 +137,7 @@ export default function BookSearch() {
               <BookTableRow>{prettyString(book.author)}</BookTableRow>
               <BookTableRow>{book.edition}</BookTableRow>
               <BookTableRow>S/.{book.price}</BookTableRow>
+              <BookTableRow>{prettyString(categories.find(c => c.id === book.category_id)!.name)}</BookTableRow>
               <BookTableRow>
                 {isSettingEnabled("advanced") &&
                   <>
