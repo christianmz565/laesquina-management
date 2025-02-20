@@ -14,7 +14,7 @@ function BookInput({ innerID, onRemove, categories }: { innerID: number, onRemov
       <input type="text" placeholder="Título" id={innerID + "-title"} className={inputStyle} />
       <input type="text" placeholder="Autor" id={innerID + "-author"} className={inputStyle} />
       <input type="text" placeholder="Edición" id={innerID + "-edition"} className={inputStyle} />
-      <input type="text" placeholder="Precio" id={innerID + "-price"} className={inputStyle} />
+      <input type="number" placeholder="Precio" id={innerID + "-price"} className={inputStyle} />
       <input type="file" accept=".pdf" id={innerID + "-file"} className={inputStyle} />
       <select id={innerID + "-category"} className={inputStyle}>
         {categories.map((category) => (

@@ -37,8 +37,19 @@ export default function BookSearch() {
       .then(data => setCategories(data));
   }, []);
 
+  function deleteBook(id: number) {
+    const confirmation = confirm("¿Estás seguro de que deseas eliminar este libro?");
+    if (!confirmation) return;
+    fetch(`${API_URL}/books/${id}`, { method: "DELETE" })
+      .then(() => setBooks(books.filter(book => book.id !== id)));
+  }
+
+  function editBook(book: Book) {
+    location.href = `/books/edit/?id=${book.id}&title=${book.title}&author=${book.author}&edition=${book.edition}&price=${book.price}&category=${book.category_id}`;
+  }
+
   function downloadBook(id: number, name: string) {
-    fetch(`${API_URL}/books/${id}/download`, { method: "POST" })
+    fetch(`${API_URL}/books/${id}/download`, { method: "GET" })
       .then(response => response.blob())
       .then(blob => {
         const url = window.URL.createObjectURL(blob);
@@ -141,8 +152,8 @@ export default function BookSearch() {
               <BookTableRow>
                 {isSettingEnabled("advanced") &&
                   <>
-                    <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Editar</button>
-                    <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Eliminar</button>
+                    <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300" onClick={() => editBook(book)}>Editar</button>
+                    <button className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300" onClick={() => deleteBook(book.id)}>Eliminar</button>
                   </>}
                 <button onClick={() => downloadBook(book.id, prettyString(book.title))} className="hover:font-bold px-1 text-zinc-700 dark:text-zinc-300">Descargar</button>
               </BookTableRow>

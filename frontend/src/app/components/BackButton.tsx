@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 export default function BackButton() {
   let [dest, setDest] = useState<string>("/");
   useEffect(() => {
-    const curr = window.location.pathname;
+    const curr = location.pathname;
     setDest(curr.substring(0, curr.lastIndexOf("/")) || "/");
   }, []);
   return (

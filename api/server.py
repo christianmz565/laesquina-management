@@ -116,7 +116,7 @@ def search_book_complete(
     return search_books_orm(db, title, author)
 
 
-@app.post("/books/{book_id}/download")
+@app.get("/books/{book_id}/download")
 def download_book(
     book_id: int,
     db: Session = Depends(get_db),
@@ -141,7 +141,8 @@ def get_book(
 
     return book
 
-@app.post("/books/{book_id}/update", response_model=BookPublic)
+
+@app.put("/books/{book_id}", response_model=BookPublic)
 def update_book(
     book_id: int,
     title: Annotated[Optional[str], Form()] = None,
@@ -156,13 +157,12 @@ def update_book(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-
     updated_data = {}
     if title:
-        title = title.replace(" ", "-")
+        title = title.replace(" ", "-").lower().strip()
         updated_data["title"] = title
     if author:
-        author = author.replace(" ", "-")
+        author = author.replace(" ", "-").lower().strip()
         updated_data["author"] = author
     if edition:
         updated_data["edition"] = edition
@@ -189,8 +189,6 @@ def update_book(
     return updated_book
 
 
-
-
 @app.post("/books/create", response_model=BookPublic)
 def create_book(
     title: Annotated[str, Form()],
@@ -202,8 +200,8 @@ def create_book(
     db: Session = Depends(get_db),
 ):
     ext = file.filename.split(".")[-1]
-    title = title.replace(" ", "-")
-    author = author.replace(" ", "-")
+    title = title.replace(" ", "-").lower().strip()
+    author = author.replace(" ", "-").lower().strip()
     full_path = os.path.join(FILES_LOCATION, f"{title}_{author}_{edition}.{ext}")
     with open(full_path, "wb") as f:
         f.write(file.file.read())
@@ -222,7 +220,8 @@ def create_book(
 
     return new_book
 
-@app.post("/books/{book_id}/delete", response_model=BookPublic)
+
+@app.delete("/books/{book_id}", response_model=BookPublic)
 def delete_book(
     book_id: int,
     db: Session = Depends(get_db),
@@ -234,6 +233,7 @@ def delete_book(
         raise HTTPException(status_code=404, detail="Book not found")
 
     return deleted_book
+
 
 if __name__ == "__main__":
     import uvicorn
