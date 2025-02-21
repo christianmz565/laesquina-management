@@ -5,9 +5,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 
 export default function BackButton() {
-  let [dest, setDest] = useState<string>("/");
+  const [dest, setDest] = useState<string>("/");
   useEffect(() => {
-    const curr = location.pathname;
+    let curr = location.pathname.substring(0, location.pathname.length - 1);
     setDest(curr.substring(0, curr.lastIndexOf("/")) || "/");
   }, []);
   return (

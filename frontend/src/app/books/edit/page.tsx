@@ -5,7 +5,7 @@ import { API_URL } from "@/app/components/Constants";
 import { Category } from "@/app/components/Models";
 import { prettyString } from "@/app/others/Utils";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 function BookEditInput({ name, children }: { name: string, children: React.ReactNode }) {
   return (
@@ -16,8 +16,8 @@ function BookEditInput({ name, children }: { name: string, children: React.React
   )
 }
 
-export default function BookEdit() {
-  let [categories, setCategories] = useState<Category[]>([]);
+function BookEditItem() {
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     fetch(API_URL + "/categories")
@@ -88,5 +88,13 @@ export default function BookEdit() {
         <button className="px-4 py-2 w-36 bg-zinc-400 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-300 block m-auto" onClick={editBook}>Editar</button>
       </div>
     </div>
+  )
+}
+
+export default function BookEdit() {
+  return (
+    <Suspense>
+      <BookEditItem />
+    </Suspense>
   )
 }

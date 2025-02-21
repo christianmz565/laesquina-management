@@ -10,7 +10,7 @@ function SettingsSwitch({ label, localName }: { label: string, localName: string
     localStorage.setItem(localName, setting.checked.toString());
   }
   useEffect(() => {
-    let enabled = localStorage.getItem(localName) === "true";
+    const enabled = localStorage.getItem(localName) === "true";
     const setting = document.getElementById(internalID) as HTMLInputElement;
     setting.checked = enabled;
   }, []);

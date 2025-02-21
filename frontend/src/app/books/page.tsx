@@ -8,7 +8,7 @@ import { isSettingEnabled } from "../others/Utils";
 import BackButton from "../components/BackButton";
 
 export default function Books() {
-  let advanced = isSettingEnabled("advanced");
+  const advanced = isSettingEnabled("advanced");
   return (
     <div className="w-full h-full p-8 relative">
       <BackButton />

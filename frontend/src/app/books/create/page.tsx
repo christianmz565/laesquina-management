@@ -27,9 +27,9 @@ function BookInput({ innerID, onRemove, categories }: { innerID: number, onRemov
 }
 
 export default function BooksCreate() {
-  let [currentID, setCurrentID] = useState(1);
-  let [bookInputs, setBookInputs] = useState<number[]>([0]);
-  let [categories, setCategories] = useState<Category[]>([]);
+  const [currentID, setCurrentID] = useState(1);
+  const [bookInputs, setBookInputs] = useState<number[]>([0]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     fetch(API_URL + "/categories")
@@ -38,7 +38,7 @@ export default function BooksCreate() {
   }, []);
 
   function handleRemove(id: number) {
-    let newInputs = bookInputs.filter((input) => input !== id);
+    const newInputs = bookInputs.filter((input) => input !== id);
     setBookInputs(newInputs);
   }
 
@@ -48,16 +48,16 @@ export default function BooksCreate() {
   }
 
   async function createBooks() {
-    for (let i of bookInputs) {
-      let title = document.getElementById(i + "-title") as HTMLInputElement;
-      let author = document.getElementById(i + "-author") as HTMLInputElement;
-      let edition = document.getElementById(i + "-edition") as HTMLInputElement;
-      let price = document.getElementById(i + "-price") as HTMLInputElement;
-      let file = document.getElementById(i + "-file") as HTMLInputElement;
-      let category = document.getElementById(i + "-category") as HTMLSelectElement;
+    for (const i of bookInputs) {
+      const title = document.getElementById(i + "-title") as HTMLInputElement;
+      const author = document.getElementById(i + "-author") as HTMLInputElement;
+      const edition = document.getElementById(i + "-edition") as HTMLInputElement;
+      const price = document.getElementById(i + "-price") as HTMLInputElement;
+      const file = document.getElementById(i + "-file") as HTMLInputElement;
+      const category = document.getElementById(i + "-category") as HTMLSelectElement;
 
       if (title.value && author.value && edition.value && price.value && file.files && category.value) {
-        let formData = new FormData();
+        const formData = new FormData();
         formData.append("title", title.value);
         formData.append("author", author.value);
         formData.append("edition", edition.value);

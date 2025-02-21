@@ -1,17 +1,14 @@
 from typing import Annotated, Optional
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, Form, File
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from database import (
+from .database import (
     Book,
     Category,
     SessionLocal,
     create_category_orm,
     get_categories_orm,
-    init_db,
     search_books_orm,
     create_book_orm,
     update_book_orm,
@@ -19,13 +16,7 @@ from database import (
     delete_book_orm,
 )
 import os
-import env
-
-origins = [
-    "http://localhost:3000",
-]
-
-FILES_LOCATION = env.FILES_PATH
+from .env import FILES_PATH
 
 
 class BookBase(BaseModel):
@@ -60,21 +51,7 @@ class CategoryPublic(CategoryBase):
     id: int
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    os.makedirs(FILES_LOCATION, exist_ok=True)
-    init_db()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+api_app = FastAPI()
 
 
 def get_db():
@@ -85,7 +62,7 @@ def get_db():
         db.close()
 
 
-@app.post("/categories/create", response_model=CategoryPublic)
+@api_app.post("/categories/create", response_model=CategoryPublic)
 def create_category(
     name: str = Form(),
     db: Session = Depends(get_db),
@@ -94,12 +71,12 @@ def create_category(
     return new_category
 
 
-@app.get("/categories", response_model=list[CategoryPublic])
+@api_app.get("/categories", response_model=list[CategoryPublic])
 def get_categories(db: Session = Depends(get_db)):
     return get_categories_orm(db)
 
 
-@app.post("/books/search", response_model=list[BookPublic])
+@api_app.post("/books/search", response_model=list[BookPublic])
 def search_book(
     query: Annotated[str, Form()],
     db: Session = Depends(get_db),
@@ -107,7 +84,7 @@ def search_book(
     return search_books_orm(db, query, query, add_or=True)
 
 
-@app.post("/books/complete-search", response_model=list[BookPublic])
+@api_app.post("/books/complete-search", response_model=list[BookPublic])
 def search_book_complete(
     title: Annotated[Optional[str], Form()] = None,
     author: Annotated[Optional[str], Form()] = None,
@@ -116,7 +93,7 @@ def search_book_complete(
     return search_books_orm(db, title, author)
 
 
-@app.get("/books/{book_id}/download")
+@api_app.get("/books/{book_id}/download")
 def download_book(
     book_id: int,
     db: Session = Depends(get_db),
@@ -129,7 +106,7 @@ def download_book(
     return FileResponse(book.file, media_type="application/pdf")
 
 
-@app.get("/books/{book_id}", response_model=BookPublic)
+@api_app.get("/books/{book_id}", response_model=BookPublic)
 def get_book(
     book_id: int,
     db: Session = Depends(get_db),
@@ -142,7 +119,7 @@ def get_book(
     return book
 
 
-@app.put("/books/{book_id}", response_model=BookPublic)
+@api_app.put("/books/{book_id}", response_model=BookPublic)
 def update_book(
     book_id: int,
     title: Annotated[Optional[str], Form()] = None,
@@ -175,7 +152,7 @@ def update_book(
     b_title = title if title else book.title
     b_author = author if author else book.author
     b_edition = edition if edition else book.edition
-    full_path = os.path.join(FILES_LOCATION, f"{b_title}_{b_author}_{b_edition}.{ext}")
+    full_path = os.path.join(FILES_PATH, f"{b_title}_{b_author}_{b_edition}.{ext}")
     if file:
         os.remove(book.file)
         with open(full_path, "wb") as f:
@@ -189,7 +166,7 @@ def update_book(
     return updated_book
 
 
-@app.post("/books/create", response_model=BookPublic)
+@api_app.post("/books/create", response_model=BookPublic)
 def create_book(
     title: Annotated[str, Form()],
     author: Annotated[str, Form()],
@@ -202,7 +179,7 @@ def create_book(
     ext = file.filename.split(".")[-1]
     title = title.replace(" ", "-").lower().strip()
     author = author.replace(" ", "-").lower().strip()
-    full_path = os.path.join(FILES_LOCATION, f"{title}_{author}_{edition}.{ext}")
+    full_path = os.path.join(FILES_PATH, f"{title}_{author}_{edition}.{ext}")
     with open(full_path, "wb") as f:
         f.write(file.file.read())
 
@@ -221,7 +198,7 @@ def create_book(
     return new_book
 
 
-@app.delete("/books/{book_id}", response_model=BookPublic)
+@api_app.delete("/books/{book_id}", response_model=BookPublic)
 def delete_book(
     book_id: int,
     db: Session = Depends(get_db),
@@ -233,9 +210,3 @@ def delete_book(
         raise HTTPException(status_code=404, detail="Book not found")
 
     return deleted_book
-
-
-if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, port=8000)

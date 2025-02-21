@@ -27,9 +27,9 @@ function BookSearchInput({ text, id }: { text: string, id: string }) {
 }
 
 export default function BookSearch() {
-  let [books, setBooks] = useState<Book[]>([]);
-  let [categories, setCategories] = useState<Category[]>([]);
-  let completeSearch = isSettingEnabled("complete-search");
+  const [books, setBooks] = useState<Book[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const completeSearch = isSettingEnabled("complete-search");
 
   useEffect(() => {
     fetch(API_URL + "/categories")

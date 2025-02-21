@@ -1,0 +1,36 @@
+services:
+  db:
+    image: mysql
+    container_name: mysql_db
+    restart: always
+    env_file:
+      - db.env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api:
+    image: python:3.13.2-alpine
+    container_name: fastapi_server
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./api:/app
+      - ./files:/app/files
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "pip install -r requirements.txt && fastapi run"]
+
+volumes:
+  mysql_data:
+  files:
+
