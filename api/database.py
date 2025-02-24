@@ -5,10 +5,10 @@ from sqlalchemy import (
     String,
     Numeric,
     Index,
-    or_,
     select,
 )
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.mysql import match
 from sqlalchemy.orm import sessionmaker, Session
 from .env import DATABASE_URL
 
@@ -30,11 +30,10 @@ class Book(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    author = Column(String(255), nullable=False)
-    edition = Column(String(50))
+    authors = Column(String(255), nullable=False)
     price = Column(Numeric(10, 2))
+    category_id = Column(Integer, index=True)
     file = Column(String(255))
-    category_id = Column(Integer, nullable=False)
 
     __table_args__ = (
         Index(
@@ -44,8 +43,8 @@ class Book(Base):
             mysql_with_parser="ngram",
         ),
         Index(
-            "ix_author_ngram",
-            "author",
+            "ix_authors_ngram",
+            "authors",
             mysql_prefix="FULLTEXT",
             mysql_with_parser="ngram",
         ),
@@ -95,21 +94,19 @@ def get_categories_orm(db: Session):
     return [category[0] for category in db.execute(select(Category)).all()]
 
 
+def get_category_orm(db: Session, category_id: int):
+    return db.execute(select(Category).where(Category.id == category_id)).first()[0]
+
+
 def search_books_orm(
-    db: Session, title: str = None, author: str = None, add_or: bool = False
+    db: Session, title: str = None, authors: str = None, category_id: int = None
 ):
     query = select(Book)
-    conditions = []
-
+    if category_id:
+        query = query.where(Book.category_id == category_id)
     if title:
-        conditions.append(Book.title.match(f"+{title}*", boolean=True))
-    if author:
-        conditions.append(Book.author.match(f"+{author}*", boolean=True))
+        query = query.where(match(Book.title, against=title).in_natural_language_mode())
+    if authors:
+        query = query.where(match(Book.authors, against=authors).in_natural_language_mode())
 
-    if conditions:
-        if add_or:
-            query = query.where(or_(*conditions))
-        else:
-            query = query.where(*conditions)
-        return [book[0] for book in db.execute(query).all()]
-    return []
+    return [result[0] for result in db.execute(query).all()]
