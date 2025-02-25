@@ -16,20 +16,19 @@ from .database import (
     delete_book_orm,
 )
 import os
-from .env import FILES_PATH
+from .env import FILES_PATH, PC_NAME
 
 
 class BookPublic(BaseModel):
     id: int
     title: str
-    authors: str
-    category_id: int
     price: float | None
+    category_id: int
 
 
 class CategoryPublic(BaseModel):
-    name: str
     id: int
+    name: str
 
 
 api_app = FastAPI()
@@ -60,11 +59,10 @@ def get_categories(db: Session = Depends(get_db)):
 @api_app.post("/books/search", response_model=list[BookPublic])
 def search_book(
     title: Annotated[Optional[str], Form()] = None,
-    authors: Annotated[Optional[str], Form()] = None,
     category_id: Annotated[Optional[int], Form()] = None,
     db: Session = Depends(get_db),
 ):
-    return search_books_orm(db, title, authors, category_id)
+    return search_books_orm(db, title, category_id)
 
 
 @api_app.get("/books/{book_id}/download")
@@ -77,7 +75,7 @@ def download_book(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    return FileResponse(book.file, media_type="application/pdf")
+    return book.file.replace("/app", f"file://///{PC_NAME}")
 
 
 @api_app.get("/books/{book_id}", response_model=BookPublic)
@@ -97,7 +95,6 @@ def get_book(
 def update_book(
     book_id: int,
     title: Annotated[Optional[str], Form()] = None,
-    authors: Annotated[Optional[str], Form()] = None,
     price: Annotated[Optional[float], Form()] = None,
     category_id: Annotated[Optional[int], Form()] = None,
     file: Annotated[Optional[UploadFile], File()] = None,
@@ -112,8 +109,6 @@ def update_book(
         updated_data["price"] = price
     if title:
         updated_data["title"] = title
-    if authors:
-        updated_data["authors"] = authors
     if category_id:
         updated_data["category_id"] = category_id
     if file:
@@ -130,14 +125,11 @@ def update_book(
 def create_book(
     file: Annotated[UploadFile, File()],
     title: Annotated[Optional[str], Form()],
-    authors: Annotated[Optional[str], Form()],
     category_id: Annotated[Optional[int], Form()],
     price: Annotated[Optional[float], Form()] = None,
     db: Session = Depends(get_db),
 ):
-    book_inst = Book(
-        title=title, authors=authors, category_id=category_id
-    )
+    book_inst = Book(title=title, category_id=category_id)
     if price:
         book_inst.price = price
 
