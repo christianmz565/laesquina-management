@@ -21,7 +21,7 @@ from .env import FILES_PATH, PC_NAME
 
 class BookPublic(BaseModel):
     id: int
-    title: str
+    name: str
     price: float | None
     category_id: int
 
@@ -58,11 +58,11 @@ def get_categories(db: Session = Depends(get_db)):
 
 @api_app.post("/books/search", response_model=list[BookPublic])
 def search_book(
-    title: Annotated[Optional[str], Form()] = None,
+    name: Annotated[str, Form()],
     category_id: Annotated[Optional[int], Form()] = None,
     db: Session = Depends(get_db),
 ):
-    return search_books_orm(db, title, category_id)
+    return search_books_orm(db, name, category_id)
 
 
 @api_app.get("/books/{book_id}/download")
@@ -94,7 +94,7 @@ def get_book(
 @api_app.put("/books/{book_id}", response_model=BookPublic)
 def update_book(
     book_id: int,
-    title: Annotated[Optional[str], Form()] = None,
+    name: Annotated[Optional[str], Form()] = None,
     price: Annotated[Optional[float], Form()] = None,
     category_id: Annotated[Optional[int], Form()] = None,
     file: Annotated[Optional[UploadFile], File()] = None,
@@ -107,8 +107,8 @@ def update_book(
     updated_data = {}
     if price:
         updated_data["price"] = price
-    if title:
-        updated_data["title"] = title
+    if name:
+        updated_data["name"] = name
     if category_id:
         updated_data["category_id"] = category_id
     if file:
@@ -124,12 +124,12 @@ def update_book(
 @api_app.post("/books/create", response_model=BookPublic)
 def create_book(
     file: Annotated[UploadFile, File()],
-    title: Annotated[Optional[str], Form()],
+    name: Annotated[Optional[str], Form()],
     category_id: Annotated[Optional[int], Form()],
     price: Annotated[Optional[float], Form()] = None,
     db: Session = Depends(get_db),
 ):
-    book_inst = Book(title=title, category_id=category_id)
+    book_inst = Book(name=name, category_id=category_id)
     if price:
         book_inst.price = price
 

@@ -6,6 +6,7 @@ from sqlalchemy import (
     Numeric,
     Index,
     select,
+    desc,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.mysql import match
@@ -29,15 +30,15 @@ class Book(Base):
     __tablename__ = "books"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
     price = Column(Numeric(10, 2))
     category_id = Column(Integer, index=True)
     file = Column(String(255))
 
     __table_args__ = (
         Index(
-            "ix_title_ngram",
-            "title",
+            "ix_name_ngram",
+            "name",
             mysql_prefix="FULLTEXT",
             mysql_with_parser="ngram",
         ),
@@ -91,13 +92,18 @@ def get_category_orm(db: Session, category_id: int):
     return db.execute(select(Category).where(Category.id == category_id)).first()[0]
 
 
-def search_books_orm(
-    db: Session, title: str = None, category_id: int = None
-):
-    query = select(Book)
+def search_books_orm(db: Session, name: str, category_id: int = None):
+    name_query = " ".join([f"+{word}*" for word in name.lower().split()])
+
+    query = (
+        select(
+            Book, match(Book.name, against=name_query).in_boolean_mode().label("score")
+        )
+        .where(match(Book.name, against=name_query).in_boolean_mode() > 0)
+        .order_by(desc("score"))
+    )
+
     if category_id:
         query = query.where(Book.category_id == category_id)
-    if title:
-        query = query.where(match(Book.title, against=title).in_natural_language_mode())
 
     return [result[0] for result in db.execute(query).all()]
