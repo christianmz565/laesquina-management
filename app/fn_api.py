@@ -36,14 +36,14 @@ def api_search_books(name: str, category_id=None) -> list[Book]:
     return books
 
 
-def api_update_book(id, name=None, category_id=None, price=None):
+def api_update_book(id, name=None, category_id=None, bounded_price=None):
     data = {}
     if name:
         data["name"] = name
     if category_id:
         data["category_id"] = category_id
-    if price:
-        data["price"] = price
+    if bounded_price:
+        data["bounded_price"] = bounded_price
     response = requests.put(
         f"{FnConfig.API_URL}/books/{id}",
         data=data,
@@ -59,13 +59,13 @@ def api_create_category(name):
     return json.loads(response.text)["id"]
 
 
-def api_create_book(filename, price, category_id):
+def api_create_book(filename, bounded_price, category_id):
     name = os.path.basename(filename).split(".")[0]
     with open(filename, "rb") as file:
         response = requests.post(
             f"{FnConfig.API_URL}/books/create",
             files={"file": file},
-            data={"price": price, "category_id": category_id, "name": name},
+            data={"bounded_price": bounded_price, "category_id": category_id, "name": name},
         )
     return response.status_code == 200
 

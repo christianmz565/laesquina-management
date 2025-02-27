@@ -11,14 +11,16 @@ from PySide6.QtWidgets import (
     QComboBox,
     QMessageBox,
 )
+import math
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from fn_api import (
     api_download_book,
     api_search_books,
     api_update_book,
-    FnStore,
 )
+from fn_config import FnConfig
+from fn_api import FnStore
 from models import Book
 from ui_books_create import BooksCreate
 from ui_config import UiConfig
@@ -59,23 +61,41 @@ class BooksSection(QWidget):
         self.contents_layout.addWidget(self.top_bar)
 
         self.results_table = QTableWidget(self.contents)
-        self.results_table.setColumnCount(5)
+        self.results_table.setColumnCount(11)
 
         id_header = QTableWidgetItem()
         id_header.setText("ID")
         self.results_table.setHorizontalHeaderItem(0, id_header)
+        open_header = QTableWidgetItem()
+        open_header.setText("Abrir")
+        self.results_table.setHorizontalHeaderItem(1, open_header)
         name_header = QTableWidgetItem()
         name_header.setText("Nombre")
-        self.results_table.setHorizontalHeaderItem(1, name_header)
+        self.results_table.setHorizontalHeaderItem(2, name_header)
         category_header = QTableWidgetItem()
         category_header.setText("Categoria")
-        self.results_table.setHorizontalHeaderItem(2, category_header)
-        price_header = QTableWidgetItem()
-        price_header.setText("Precio")
-        self.results_table.setHorizontalHeaderItem(3, price_header)
-        actions_header = QTableWidgetItem()
-        actions_header.setText("Acciones")
-        self.results_table.setHorizontalHeaderItem(4, actions_header)
+        self.results_table.setHorizontalHeaderItem(3, category_header)
+        bounded_header = QTableWidgetItem()
+        bounded_header.setText("Empastado")
+        self.results_table.setHorizontalHeaderItem(4, bounded_header)
+        bn_a5_header = QTableWidgetItem()
+        bn_a5_header.setText("B/N A5")
+        self.results_table.setHorizontalHeaderItem(5, bn_a5_header)
+        bn_a4_header = QTableWidgetItem()
+        bn_a4_header.setText("B/N A4")
+        self.results_table.setHorizontalHeaderItem(6, bn_a4_header)
+        color_a5_header = QTableWidgetItem()
+        color_a5_header.setText("Color A5")
+        self.results_table.setHorizontalHeaderItem(7, color_a5_header)
+        color_a4_header = QTableWidgetItem()
+        color_a4_header.setText("Color A4")
+        self.results_table.setHorizontalHeaderItem(8, color_a4_header)
+        spiral_header = QTableWidgetItem()
+        spiral_header.setText("Anillado")
+        self.results_table.setHorizontalHeaderItem(9, spiral_header)
+        update_header = QTableWidgetItem()
+        update_header.setText("Actualizar")
+        self.results_table.setHorizontalHeaderItem(10, update_header)
 
         self.results_table.setSizeAdjustPolicy(
             QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents
@@ -84,7 +104,7 @@ class BooksSection(QWidget):
         # TODO: disabled until it stops causing bugs :<
         # self.results_table.setSortingEnabled(True)
 
-        self.results_table.horizontalHeader().setMinimumSectionSize(50)
+        self.results_table.horizontalHeader().setMinimumSectionSize(60)
         self.results_table.horizontalHeader().setDefaultSectionSize(160)
         self.results_table.horizontalHeader().setProperty("showSortIndicator", True)
         self.results_table.verticalHeader().setVisible(False)
@@ -112,40 +132,71 @@ class BooksSection(QWidget):
         id_item.setFlags(Qt.ItemFlag.ItemIsEditable)
         self.results_table.setItem(row, 0, id_item)
 
+        open_item = QPushButton()
+        open_item.setText("Abrir")
+        open_item.clicked.connect(lambda: self.download_book(book.id))
+        self.results_table.setCellWidget(row, 1, open_item)
+
         name_item = QTableWidgetItem()
         name_item.setText(book.name)
-        self.results_table.setItem(row, 1, name_item)
+        self.results_table.setItem(row, 2, name_item)
 
         category_item = QTableWidgetItem()
         category_item.setText(FnStore.CATEGORIES[book.category_id])
-        self.results_table.setItem(row, 2, category_item)
+        self.results_table.setItem(row, 3, category_item)
         self.results_table.cellDoubleClicked.connect(
             lambda r, c: self.change_category_to_combobox(r, c, row, book.category_id)
         )
 
-        price_item = QTableWidgetItem()
-        price_item.setData(
-            Qt.ItemDataRole.DisplayRole, (0.0 if book.price is None else book.price)
+        bounded_item = QTableWidgetItem()
+        bounded_item.setData(
+            Qt.ItemDataRole.DisplayRole, book.bounded_price if book.bounded_price else 0
         )
-        self.results_table.setItem(row, 3, price_item)
+        self.results_table.setItem(row, 4, bounded_item)
 
-        download_item = QWidget()
-        download_item_layout = QHBoxLayout(download_item)
-        download_item.setLayout(download_item_layout)
+        bn_a5_price = f"S/.{math.ceil(book.page_count * 0.025)}"
+        bn_a5_item = QTableWidgetItem()
+        bn_a5_item.setFlags(Qt.ItemFlag.ItemIsEditable)
+        bn_a5_item.setData(Qt.ItemDataRole.DisplayRole, bn_a5_price)
+        self.results_table.setItem(row, 5, bn_a5_item)
 
-        open_button = QPushButton(download_item)
-        open_button.setText("Abrir")
-        open_button.clicked.connect(lambda: self.download_book(book.id))
-        download_item_layout.addWidget(open_button)
+        bn_a4_price = f"S/.{math.ceil(book.page_count * 0.05)}"
+        bn_a4_item = QTableWidgetItem()
+        bn_a4_item.setFlags(Qt.ItemFlag.ItemIsEditable)
+        bn_a4_item.setData(Qt.ItemDataRole.DisplayRole, bn_a4_price)
+        self.results_table.setItem(row, 6, bn_a4_item)
 
-        update_button = QPushButton(download_item)
-        update_button.setText("Actualizar")
-        update_button.clicked.connect(lambda: self.update_book(row))
-        download_item_layout.addWidget(update_button)
-        self.results_table.setCellWidget(row, 4, download_item)
+        color_a5_price = f"S/.{math.ceil(book.page_count * 0.075)}"
+        color_a5_item = QTableWidgetItem()
+        color_a5_item.setFlags(Qt.ItemFlag.ItemIsEditable)
+        color_a5_item.setData(Qt.ItemDataRole.DisplayRole, color_a5_price)
+        self.results_table.setItem(row, 7, color_a5_item)
+
+        color_a4_price = f"S/.{math.ceil(book.page_count * 0.15)}"
+        color_a4_item = QTableWidgetItem()
+        color_a4_item.setFlags(Qt.ItemFlag.ItemIsEditable)
+        color_a4_item.setData(Qt.ItemDataRole.DisplayRole, color_a4_price)
+        self.results_table.setItem(row, 8, color_a4_item)
+
+        spiral_price = f"+{self.get_spiral_price_from_page_count(book.page_count)}"
+        spiral_item = QTableWidgetItem()
+        spiral_item.setFlags(Qt.ItemFlag.ItemIsEditable)
+        spiral_item.setData(Qt.ItemDataRole.DisplayRole, spiral_price)
+        self.results_table.setItem(row, 9, spiral_item)
+
+        update_item = QPushButton()
+        update_item.setText("Actualizar")
+        update_item.clicked.connect(lambda: self.update_book(row))
+        self.results_table.setCellWidget(row, 10, update_item)
+
+    def get_spiral_price_from_page_count(self, page_count):
+        for limit, price in FnConfig.SPIRAL_PRICE_UL:
+            if page_count < limit:
+                return price
+        return -1
 
     def change_category_to_combobox(self, row, column, current_row, current_id):
-        if column == 2 and row == current_row:
+        if column == 3 and row == current_row:
             category_item = QComboBox()
             category_item.addItems(FnStore.CATEGORY_CHOICES)
             category_item.setCurrentText(FnStore.CATEGORIES[current_id])
@@ -175,16 +226,18 @@ class BooksSection(QWidget):
             return
 
         book_id = self.results_table.item(row, 0).data(Qt.ItemDataRole.DisplayRole)
-        book_name = self.results_table.item(row, 1).data(Qt.ItemDataRole.DisplayRole)
-        book_category_widget = self.results_table.cellWidget(row, 2)
+        book_name = self.results_table.item(row, 2).data(Qt.ItemDataRole.DisplayRole)
+        book_category_widget = self.results_table.cellWidget(row, 3)
         book_category = (
             book_category_widget.currentIndex() + 1
             if isinstance(book_category_widget, QComboBox)
             else None
         )
-        book_price = self.results_table.item(row, 3).data(Qt.ItemDataRole.DisplayRole)
+        book_bounded_price = self.results_table.item(row, 4).data(
+            Qt.ItemDataRole.DisplayRole
+        )
 
-        if api_update_book(book_id, book_name, book_category, book_price):
+        if api_update_book(book_id, book_name, book_category, book_bounded_price):
             QMessageBox.information(
                 self,
                 "Actualización exitosa",

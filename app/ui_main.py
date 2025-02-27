@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
 
     def setup(self):
         self.setWindowTitle("La Esquina")
-        self.resize(1000, 800)
+        self.resize(1400, 800)
         main_font = QFont()
         main_font.setFamilies(UiConfig.FONT_FAMILY)
         self.setFont(main_font)

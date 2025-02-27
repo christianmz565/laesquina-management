@@ -34,7 +34,7 @@ class AboutSection(QWidget):
         self.text = QTextEdit(self.contents)
         self.text.setReadOnly(True)
         self.text.setPlainText(
-            f"xd\nEl usuario para la carpeta compartida es: {NETWORK_DRIVE_USER}\nLa contraseña para la carpeta compartida es: {NETWORK_DRIVE_PASSWORD}"
+            f"xd\nEl usuario para la carpeta compartida es: {NETWORK_DRIVE_USER}\nLa contraseña para la carpeta compartida es: {NETWORK_DRIVE_PASSWORD}\n\nLos precios de anillado son experimentales..... aun tengo que hacer la tabla de precios mejor o ponerlo como un campo editable"
         )
         text_font = QFont()
         text_font.setPointSize(12)

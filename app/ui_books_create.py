@@ -94,14 +94,14 @@ class BooksCreate(QWidget):
         line.setFrameShadow(QFrame.Sunken)
         self.main_layout.addWidget(line)
 
-        self.price_subtitle = QLabel(self, text="Precio")
-        self.price_subtitle.setFont(subtitle_font)
-        self.main_layout.addWidget(self.price_subtitle)
+        self.bounded_price_subtitle = QLabel(self, text="Precio Empastado")
+        self.bounded_price_subtitle.setFont(subtitle_font)
+        self.main_layout.addWidget(self.bounded_price_subtitle)
 
-        self.price_edit = QDoubleSpinBox(self)
-        self.price_edit.setPrefix("S/. ")
-        self.price_edit.setDecimals(2)
-        self.main_layout.addWidget(self.price_edit)
+        self.bounded_price_edit = QDoubleSpinBox(self)
+        self.bounded_price_edit.setPrefix("S/. ")
+        self.bounded_price_edit.setDecimals(2)
+        self.main_layout.addWidget(self.bounded_price_edit)
 
         line = QFrame(self)
         line.setFrameShape(QFrame.HLine)
@@ -133,7 +133,7 @@ class BooksCreate(QWidget):
             category_id = api_create_category(category_name)
         else:
             category_id = self.category_combo.currentIndex() + 1
-        if api_create_book(self.chosen_file, self.price_edit.value(), category_id):
+        if api_create_book(self.chosen_file, self.bounded_price_edit.value(), category_id):
             QMessageBox.information(self, "Libro creado", "El libro ha sido creado")
         else:
             QMessageBox.critical(self, "Error", "Hubo un error al crear el libro")

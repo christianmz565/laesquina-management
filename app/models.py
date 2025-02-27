@@ -1,17 +1,13 @@
-class Book():
-    def __init__(self, id, name, category_id, price):
+class Book:
+    def __init__(self, id, name, category_id, page_count, bounded_price):
         self.id = id
         self.name = name
         self.category_id = category_id
-        self.price = price
+        self.page_count = page_count
+        self.bounded_price = bounded_price
 
-    def __str__(self):
-        return f"{self.id} - {self.name} - {self.category_id} - S/.{self.price}"
 
-class Category():
+class Category:
     def __init__(self, id, name):
         self.id = id
         self.name = name
-
-    def __str__(self):
-        return f"{self.id} - {self.name}"

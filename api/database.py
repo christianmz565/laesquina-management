@@ -31,7 +31,8 @@ class Book(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    price = Column(Numeric(10, 2))
+    page_count = Column(Integer)
+    bounded_price = Column(Numeric(10, 2))
     category_id = Column(Integer, index=True)
     file = Column(String(255))
 
