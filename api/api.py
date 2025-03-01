@@ -100,7 +100,7 @@ def recalculate_pages(
 ):
     for book_id in range(start_id, end_id + 1):
         book = get_book_orm(db, book_id)
-        if not book:
+        if not book or book.file.split(".")[-1] != "pdf":
             continue
 
         doc = fitz.open(book.file)
@@ -163,11 +163,13 @@ def create_book(
     book_id = new_book.id
     ext = file.filename.split(".")[-1]
     full_path = os.path.join(FILES_PATH, str(book_id) + "." + ext)
+    page_count = 0
     with open(full_path, "wb") as f:
         f.write(file.file.read())
-        doc = fitz.open(full_path)
-        page_count = doc.page_count
-        doc.close()
+        if ext == "pdf":
+            doc = fitz.open(full_path)
+            page_count = doc.page_count
+            doc.close()
 
     new_book.file = full_path
     new_book.page_count = page_count
